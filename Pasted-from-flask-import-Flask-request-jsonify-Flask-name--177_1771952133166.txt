@@ -1,0 +1,195 @@
+from flask import Flask, request, jsonify
+
+приложение = Flask(__name__)
+
+# ================= ЛОГИКА СОВЕТОВ =================
+
+def дать_совет(тема, сообщение):
+
+    сообщение = сообщение.lower()
+
+    if тема == "вокал":
+        return (
+            "🎤 Совет по вокалу:\n"
+            "- Срежь низ до 80 Hz\n"
+            "- Компрессия: Ratio 3:1\n"
+            "- Attack 10-20 ms\n"
+            "- Release 50-100 ms\n"
+            "- Добавь де-эссер на 5-8 kHz\n"
+            "- Легкий реверб 10-15%"
+        )
+
+    elif тема == "барабаны":
+        return (
+            "🥁 Совет по барабанам:\n"
+            "- Усиль атаку 4-6 kHz\n"
+            "- Подрежь мутные 200-300 Hz\n"
+            "- Параллельная компрессия\n"
+            "- Добавь сатурацию для плотности"
+        )
+
+    elif тема == "мастеринг":
+        return (
+            "🎛 Совет по мастерингу:\n"
+            "- Цель LUFS: -14 для стриминга\n"
+            "- True Peak не выше -1 dB\n"
+            "- Лимитер в конце цепочки\n"
+            "- Контролируй низ до 40 Hz"
+        )
+
+    else:
+        return "Опиши проблему подробнее."
+
+
+# ================= ГЛАВНАЯ СТРАНИЦА =================
+
+@приложение.route("/")
+def главная():
+    return """
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MixMentor AI</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #0f0f0f;
+    color: white;
+}
+
+.container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.вкладки {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.вкладки button {
+    flex: 1;
+    padding: 10px;
+    background: #1f1f1f;
+    color: white;
+    border: none;
+    border-radius: 8px;
+}
+
+.чат {
+    display: flex;
+    flex-direction: column;
+}
+
+#сообщения {
+    min-height: 200px;
+    margin-bottom: 10px;
+    white-space: pre-line;
+}
+
+input {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    margin-bottom: 10px;
+}
+
+.кнопка {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    background: #4CAF50;
+    color: white;
+    font-weight: bold;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+
+    .вкладки {
+        flex-direction: column;
+    }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎚 MixMentor AI</h1>
+
+    <div class="вкладки">
+        <button onclick="выбратьТему('вокал')">Вокал</button>
+        <button onclick="выбратьТему('барабаны')">Барабаны</button>
+        <button onclick="выбратьТему('мастеринг')">Мастеринг</button>
+    </div>
+
+    <div class="чат">
+        <div id="сообщения"></div>
+        <input type="text" id="ввод" placeholder="Опиши проблему...">
+        <button class="кнопка" onclick="отправить()">Получить совет</button>
+    </div>
+</div>
+
+<script>
+let текущаяТема = "вокал";
+
+function выбратьТему(тема) {
+    текущаяТема = тема;
+    document.getElementById("сообщения").innerHTML = "";
+}
+
+function отправить() {
+    const поле = document.getElementById("ввод");
+    const текст = поле.value;
+
+    fetch("/спросить", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            тема: текущаяТема,
+            текст: текст
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById("сообщения").innerText =
+            "Ты: " + текст + "\\n\\nMixMentor AI: " + data.ответ;
+        поле.value = "";
+    });
+}
+</script>
+
+</body>
+</html>
+"""
+
+
+# ================= API =================
+
+@приложение.route("/спросить", methods=["POST"])
+def спросить():
+    данные = request.json
+    тема = данные.get("тема")
+    текст = данные.get("текст")
+    ответ = дать_совет(тема, текст)
+    return jsonify({"ответ": ответ})
+
+
+# ================= ЗАПУСК =================
+
+if __name__ == "__main__":
+    приложение.run(host="0.0.0.0", port=81)
