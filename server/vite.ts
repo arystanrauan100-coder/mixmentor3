@@ -3,6 +3,14 @@ import { type Server } from "http";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
+import rateLimit from "express-rate-limit";
+
+const devLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export async function setupVite(server: Server, app: Express) {
   // Use indirect dynamic imports to prevent TypeScript from statically analyzing
@@ -34,7 +42,7 @@ export async function setupVite(server: Server, app: Express) {
 
   app.use(viteServer.middlewares);
 
-  app.use("/{*path}", async (req: Request, res: Response, next: NextFunction) => {
+  app.use("/{*path}", devLimiter, async (req: Request, res: Response, next: NextFunction) => {
     const url = req.originalUrl;
 
     try {
